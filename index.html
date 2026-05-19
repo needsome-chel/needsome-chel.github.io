@@ -1,35 +1,841 @@
-html
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Мой WebXR-тур</title>
-  <script src="https://aframe.io/releases/latest/aframe.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Локальный Spotify | Ваша музыка, плейлисты</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Inter', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #0a0b0e 0%, #12141c 100%);
+            min-height: 100vh;
+            color: #f0f0f0;
+        }
+
+        /* Главный контейнер */
+        .app {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px 24px 32px;
+        }
+
+        /* хедер */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            margin-bottom: 32px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 16px;
+        }
+        .logo {
+            font-size: 1.9rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1db954, #1aa34a);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .logo span {
+            font-size: 1rem;
+            background: none;
+            color: #7a7e8c;
+            font-weight: 400;
+        }
+        .stats {
+            background: #1e1f2c;
+            padding: 6px 14px;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #bcbcbc;
+        }
+
+        /* главная сетка */
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 28px;
+        }
+
+        /* левая панель — загрузка и библиотека */
+        .upload-area {
+            flex: 1.2;
+            min-width: 280px;
+            background: #0f1119;
+            border-radius: 32px;
+            padding: 24px;
+            backdrop-filter: blur(2px);
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.5);
+        }
+
+        /* карточка загрузки */
+        .upload-card {
+            background: #181b26;
+            border-radius: 28px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 32px;
+            border: 1px dashed #3a3f54;
+            transition: 0.2s;
+        }
+        .upload-card:hover {
+            border-color: #1db954;
+            background: #1c1f2d;
+        }
+        .upload-label {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .upload-icon {
+            font-size: 48px;
+            background: #2a2e42;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .info-text {
+            font-size: 0.75rem;
+            color: #9aa0b5;
+            margin-top: 12px;
+        }
+
+        /* ваш плейлист (список треков) */
+        .playlist-section {
+            margin-top: 12px;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .track-list {
+            max-height: 420px;
+            overflow-y: auto;
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .track-item {
+            background: #151a24;
+            border-radius: 18px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: 0.1s;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .track-item:hover {
+            background: #1e2533;
+            border-color: #2a3348;
+        }
+        .track-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 3;
+        }
+        .track-name {
+            font-weight: 600;
+            word-break: break-word;
+        }
+        .track-meta {
+            font-size: 0.7rem;
+            color: #aaaec4;
+        }
+        .track-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .play-btn {
+            background: #1db954;
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 40px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.1s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .delete-btn {
+            background: #2c2f3f;
+            border: none;
+            color: #ff8a7a;
+            width: 32px;
+            height: 32px;
+            border-radius: 40px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .delete-btn:hover {
+            background: #4a2a2f;
+            color: #ff5e4a;
+        }
+        .play-btn:hover {
+            background: #1ed760;
+            transform: scale(1.02);
+        }
+
+        /* правая панель — плеер + управление плейлистами */
+        .player-area {
+            flex: 1.8;
+            min-width: 320px;
+            background: #0f1119;
+            border-radius: 32px;
+            padding: 24px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .now-playing-card {
+            background: #12161f;
+            border-radius: 32px;
+            padding: 24px;
+            margin-bottom: 28px;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+        }
+        .track-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+        .current-track-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 12px 0 6px;
+        }
+        .current-artist {
+            color: #b0b7d0;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        /* аудио плеер кастомный */
+        audio {
+            width: 100%;
+            margin: 16px 0;
+            border-radius: 80px;
+            background: #1e1f2c;
+        }
+        .controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 18px;
+        }
+        .ctrl-btn {
+            background: #252a38;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            padding: 8px 18px;
+            border-radius: 60px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.1s;
+        }
+        .ctrl-btn:active {
+            transform: scale(0.96);
+        }
+        .playlist-manager {
+            margin-top: 12px;
+        }
+        .playlist-buttons {
+            display: flex;
+            gap: 12px;
+            margin: 18px 0;
+            flex-wrap: wrap;
+        }
+        .action-btn {
+            background: #1f2538;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .action-btn.special {
+            background: #2a384c;
+        }
+        input.playlist-input {
+            background: #1b1e2c;
+            border: 1px solid #2e3448;
+            padding: 10px 16px;
+            border-radius: 60px;
+            color: white;
+            width: 180px;
+            outline: none;
+        }
+        .playlist-selector {
+            background: #1b1f2b;
+            border-radius: 28px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        .playlist-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #2a2f40;
+            padding-bottom: 12px;
+        }
+        .playlist-tab {
+            background: #212636;
+            padding: 6px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: 0.1s;
+        }
+        .playlist-tab.active {
+            background: #1db954;
+            color: black;
+            font-weight: 600;
+        }
+        .empty-message {
+            color: #6f768b;
+            text-align: center;
+            padding: 28px;
+            font-style: italic;
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1d212f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a405b;
+            border-radius: 10px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.7rem;
+            color: #4e546c;
+        }
+        @media (max-width: 780px) {
+            .app { padding: 16px; }
+            .track-name { font-size: 0.85rem; }
+        }
+    </style>
 </head>
 <body>
-  <a-scene>
-    <!-- Локация 1: Комната -->
-    <a-entity id="room">
-      <a-sky src="room.jpg"></a-sky>
-      <a-text value="Комната" position="0 2 -3" color="white"></a-text>
-      <a-cylinder position="2 1 -2" radius="0.3" height="0.05" color="blue"
-                  link="on: click; href: #street"></a-cylinder>
-      <a-text value="Выйти" position="2 1.5 -2" color="white"></a-text>
-    </a-entity>
-    
-    <!-- Локация 2: Улица -->
-    <a-entity id="street">
-      <a-sky src="street.jpg"></a-sky>
-      <a-text value="Улица" position="0 2 -3" color="white"></a-text>
-      <a-cylinder position="-2 1 -2" radius="0.3" height="0.05" color="red"
-                  link="on: click; href: #room"></a-cylinder>
-      <a-text value="Вернуться" position="-2 1.5 -2" color="white"></a-text>
-    </a-entity>
-    
-    <a-camera position="0 1.6 0">
-      <a-cursor></a-cursor>
-    </a-camera>
-  </a-scene>
+<div class="app">
+    <div class="header">
+        <div class="logo">🎵 SoundHive <span>ваш личный Spotify</span></div>
+        <div class="stats" id="trackCounter">0 треков в плейлисте</div>
+    </div>
+
+    <div class="dashboard">
+        <!-- левая колонка: загрузка и библиотека -->
+        <div class="upload-area">
+            <div class="upload-card">
+                <label class="upload-label">
+                    <div class="upload-icon">📂🎶</div>
+                    <span style="font-weight: 600">Загрузить аудио (MP3, WAV, OGG, M4A)</span>
+                    <input type="file" id="fileInput" accept="audio/*" multiple>
+                </label>
+                <div class="info-text">Загружайте свою музыку — треки появятся в «Мои треки»</div>
+            </div>
+
+            <div class="playlist-section">
+                <div class="section-title">
+                    📀 Моя фонотека
+                    <span style="font-size: 0.7rem;">(нажмите ▶ чтобы играть)</span>
+                </div>
+                <div id="trackListContainer" class="track-list">
+                    <div class="empty-message">Нет загруженной музыки. Нажмите выше, чтобы добавить треки 🎧</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- правая панель: плеер + управление плейлистами -->
+        <div class="player-area">
+            <div class="now-playing-card">
+                <div class="track-title">🎧 Сейчас играет</div>
+                <div id="currentTrackDisplay" class="current-track-name">—</div>
+                <div id="currentArtistDisplay" class="current-artist">Выберите трек</div>
+                <audio id="audioPlayer" controls style="width: 100%;"></audio>
+                <div class="controls">
+                    <button id="prevBtn" class="ctrl-btn">⏮ Пред</button>
+                    <button id="nextBtn" class="ctrl-btn">След ⏭</button>
+                </div>
+            </div>
+
+            <div class="playlist-manager">
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <span>📁 Плейлисты:</span>
+                    <input type="text" id="newPlaylistName" placeholder="Название плейлиста" class="playlist-input">
+                    <button id="createPlaylistBtn" class="action-btn">➕ Создать</button>
+                </div>
+
+                <div class="playlist-selector">
+                    <div id="playlistTabs" class="playlist-tabs">
+                        <!-- динамические вкладки плейлистов -->
+                    </div>
+                    <div style="margin: 12px 0 8px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                        <span>➕ Добавить текущий трек в:</span>
+                        <select id="playlistSelectAdd" style="background:#1a1e2c; color:white; padding:6px 12px; border-radius: 30px; border:1px solid #2c3148;">
+                            <option value="">-- выберите плейлист --</option>
+                        </select>
+                        <button id="addToPlaylistBtn" class="action-btn">➕ Добавить</button>
+                    </div>
+                    <div id="playlistContentArea" style="margin-top: 20px;">
+                        <div class="section-title" style="font-size: 1.2rem;">🎵 Треки плейлиста</div>
+                        <div id="playlistTrackList" class="track-list">
+                            <div class="empty-message">Выберите плейлист, чтобы увидеть его треки</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>✨ Полностью локальное хранение (IndexedDB). Загружайте музыку, создавайте плейлисты, меняйте треки — всё как в Spotify</footer>
+</div>
+
+<script>
+    // ---------- Инициализация IndexedDB ----------
+    const DB_NAME = 'SpotifyCloneDB';
+    const DB_VERSION = 2;
+    let db = null;
+    let currentPlaylistId = 'default'; // 'default' — главная библиотека (все треки)
+    let allTracks = [];               // массив объектов { id, name, artist, dataURL, duration? }
+    let playlists = [];               // [{ id, name, trackIds }] trackIds - массив id треков
+    let currentAudioUrl = null;
+    let currentTrackId = null;
+    let currentIndexInGlobal = -1;
+
+    // DOM элементы
+    const fileInput = document.getElementById('fileInput');
+    const trackListDiv = document.getElementById('trackListContainer');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const currentTrackNameSpan = document.getElementById('currentTrackDisplay');
+    const currentArtistSpan = document.getElementById('currentArtistDisplay');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const trackCounterSpan = document.getElementById('trackCounter');
+    const newPlaylistNameInput = document.getElementById('newPlaylistName');
+    const createPlaylistBtn = document.getElementById('createPlaylistBtn');
+    const playlistTabsDiv = document.getElementById('playlistTabs');
+    const playlistSelectAdd = document.getElementById('playlistSelectAdd');
+    const addToPlaylistBtn = document.getElementById('addToPlaylistBtn');
+    const playlistTrackListDiv = document.getElementById('playlistTrackList');
+
+    // Открыть / создать БД
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            request.onerror = (e) => reject('Ошибка БД');
+            request.onsuccess = (e) => {
+                db = request.result;
+                resolve();
+            };
+            request.onupgradeneeded = (e) => {
+                const dbUp = e.target.result;
+                if (!dbUp.objectStoreNames.contains('tracks')) {
+                    const tracksStore = dbUp.createObjectStore('tracks', { keyPath: 'id' });
+                    tracksStore.createIndex('name', 'name');
+                }
+                if (!dbUp.objectStoreNames.contains('playlists')) {
+                    const playStore = dbUp.createObjectStore('playlists', { keyPath: 'id' });
+                }
+                // миграция: если есть старые данные, создаем дефолтный плейлист
+                if (!dbUp.objectStoreNames.contains('playlists')) {
+                    // уже создали выше
+                }
+            };
+        });
+    }
+
+    // Загрузка всех треков из БД
+    async function loadAllTracks() {
+        return new Promise((resolve) => {
+            const transaction = db.transaction('tracks', 'readonly');
+            const store = transaction.objectStore('tracks');
+            const request = store.getAll();
+            request.onsuccess = () => {
+                allTracks = request.result || [];
+                updateTrackCounter();
+                resolve();
+            };
+            request.onerror = () => { allTracks = []; resolve(); };
+        });
+    }
+
+    // загрузка всех плейлистов
+    async function loadPlaylists() {
+        return new Promise((resolve) => {
+            const transaction = db.transaction('playlists', 'readonly');
+            const store = transaction.objectStore('playlists');
+            const request = store.getAll();
+            request.onsuccess = () => {
+                playlists = request.result || [];
+                if (playlists.length === 0) {
+                    // Создаём плейлист по умолчанию "Все треки" (виртуальный, но для удобства создадим реальный)
+                    const defaultPlaylist = { id: 'default', name: '⭐ Все треки', trackIds: [] };
+                    playlists.push(defaultPlaylist);
+                    // сохраним в БД
+                    const trans = db.transaction('playlists', 'readwrite');
+                    trans.objectStore('playlists').add(defaultPlaylist);
+                    trans.oncomplete = () => resolve();
+                } else {
+                    resolve();
+                }
+            };
+            request.onerror = () => { playlists = []; resolve(); };
+        });
+    }
+
+    // Сохранить все плейлисты (после изменений)
+    async function savePlaylists() {
+        const transaction = db.transaction('playlists', 'readwrite');
+        const store = transaction.objectStore('playlists');
+        store.clear();
+        for (let p of playlists) {
+            store.add(p);
+        }
+        return new Promise(resolve => { transaction.oncomplete = resolve; });
+    }
+
+    // Добавить трек в БД
+    async function addTrackToDB(trackObj) {
+        const transaction = db.transaction('tracks', 'readwrite');
+        const store = transaction.objectStore('tracks');
+        store.add(trackObj);
+        return new Promise(resolve => { transaction.oncomplete = resolve; });
+    }
+
+    // Удалить трек из БД
+    async function deleteTrackFromDB(trackId) {
+        const transaction = db.transaction('tracks', 'readwrite');
+        transaction.objectStore('tracks').delete(trackId);
+        return new Promise(resolve => { transaction.oncomplete = resolve; });
+    }
+
+    // обновить отображение списка треков в левой колонке (все треки)
+    async function renderGlobalTrackList() {
+        if (!allTracks.length) {
+            trackListDiv.innerHTML = '<div class="empty-message">Нет загруженной музыки. Добавьте треки 🎧</div>';
+            trackCounterSpan.innerText = `0 треков в библиотеке`;
+            return;
+        }
+        trackCounterSpan.innerText = `${allTracks.length} трек(ов) в библиотеке`;
+        trackListDiv.innerHTML = '';
+        allTracks.forEach(track => {
+            const item = createTrackElement(track);
+            trackListDiv.appendChild(item);
+        });
+    }
+
+    function createTrackElement(track) {
+        const div = document.createElement('div');
+        div.className = 'track-item';
+        div.innerHTML = `
+            <div class="track-info">
+                <div class="track-name">${escapeHtml(track.name)}</div>
+                <div class="track-meta">🎵 ${escapeHtml(track.artist || 'Неизвестный исполнитель')}</div>
+            </div>
+            <div class="track-actions">
+                <button class="play-btn" data-id="${track.id}" data-action="play">▶</button>
+                <button class="delete-btn" data-id="${track.id}" data-action="delete">🗑</button>
+            </div>
+        `;
+        div.querySelector('.play-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            playTrackById(track.id);
+        });
+        div.querySelector('.delete-btn').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await deleteTrack(track.id);
+        });
+        return div;
+    }
+
+    async function deleteTrack(trackId) {
+        // удалить из allTracks
+        const track = allTracks.find(t => t.id === trackId);
+        if (!track) return;
+        // удалить из БД треков
+        await deleteTrackFromDB(trackId);
+        // удалить id из всех плейлистов
+        for (let pl of playlists) {
+            if (pl.trackIds.includes(trackId)) {
+                pl.trackIds = pl.trackIds.filter(id => id !== trackId);
+            }
+        }
+        await savePlaylists();
+        // перезагружаем данные
+        await loadAllTracks();
+        await renderGlobalTrackList();
+        // если удалён текущий трек, остановить
+        if (currentTrackId === trackId) {
+            audioPlayer.pause();
+            currentTrackNameSpan.innerText = '—';
+            currentArtistSpan.innerText = 'Трек удален';
+            currentTrackId = null;
+            currentAudioUrl = null;
+        }
+        await renderCurrentPlaylistContent(); // обновить правый плейлист
+        renderPlaylistTabs();
+        updateSelectOptions();
+    }
+
+    function playTrackById(trackId) {
+        const track = allTracks.find(t => t.id === trackId);
+        if (!track) return;
+        if (currentAudioUrl) {
+            URL.revokeObjectURL(currentAudioUrl);
+        }
+        const audioUrl = URL.createObjectURL(dataURLtoBlob(track.dataURL));
+        audioPlayer.src = audioUrl;
+        currentAudioUrl = audioUrl;
+        currentTrackId = track.id;
+        currentTrackNameSpan.innerText = track.name;
+        currentArtistSpan.innerText = track.artist || 'Исполнитель';
+        audioPlayer.play().catch(e => console.warn);
+        // обновить активный индекс для навигации
+        currentIndexInGlobal = allTracks.findIndex(t => t.id === trackId);
+    }
+
+    function dataURLtoBlob(dataURL) {
+        const arr = dataURL.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) { u8arr[n] = bstr.charCodeAt(n); }
+        return new Blob([u8arr], { type: mime });
+    }
+
+    // загрузка файлов
+    async function handleFiles(files) {
+        for (const file of files) {
+            if (!file.type.startsWith('audio/')) continue;
+            const reader = new FileReader();
+            const dataUrlPromise = new Promise((resolve) => {
+                reader.onload = async (e) => {
+                    const dataURL = e.target.result;
+                    let artist = 'Неизвестный';
+                    let title = file.name.replace(/\.[^/.]+$/, '');
+                    const trackId = Date.now() + '-' + Math.random() + '-' + file.name;
+                    const trackObj = {
+                        id: trackId,
+                        name: title,
+                        artist: artist,
+                        dataURL: dataURL,
+                        fileName: file.name
+                    };
+                    await addTrackToDB(trackObj);
+                    resolve();
+                };
+                reader.readAsDataURL(file);
+            });
+            await dataUrlPromise;
+        }
+        await loadAllTracks();
+        await renderGlobalTrackList();
+        // добавим новые треки в "Все треки" плейлист автоматически
+        const allPlaylist = playlists.find(p => p.id === 'default');
+        if (allPlaylist) {
+            const newTrackIds = allTracks.map(t => t.id);
+            allPlaylist.trackIds = [...new Set(newTrackIds)];
+            await savePlaylists();
+        }
+        await renderCurrentPlaylistContent();
+        renderPlaylistTabs();
+        updateSelectOptions();
+    }
+
+    // отобразить содержимое выбранного плейлиста (правый блок)
+    async function renderCurrentPlaylistContent() {
+        const playlist = playlists.find(p => p.id === currentPlaylistId);
+        if (!playlist || !playlist.trackIds.length) {
+            playlistTrackListDiv.innerHTML = '<div class="empty-message">🎵 В этом плейлисте нет треков. Добавьте из левой колонки или через кнопку "Добавить текущий трек"</div>';
+            return;
+        }
+        const tracksInPlaylist = playlist.trackIds.map(id => allTracks.find(t => t.id === id)).filter(t => t);
+        playlistTrackListDiv.innerHTML = '';
+        tracksInPlaylist.forEach(track => {
+            const trackDiv = document.createElement('div');
+            trackDiv.className = 'track-item';
+            trackDiv.innerHTML = `
+                <div class="track-info">
+                    <div class="track-name">${escapeHtml(track.name)}</div>
+                    <div class="track-meta">${escapeHtml(track.artist || '—')}</div>
+                </div>
+                <div class="track-actions">
+                    <button class="play-btn" data-pid="${track.id}">▶</button>
+                    <button class="delete-from-pl" data-pid="${track.id}" data-plid="${currentPlaylistId}">❌</button>
+                </div>
+            `;
+            trackDiv.querySelector('.play-btn').addEventListener('click', () => playTrackById(track.id));
+            const delBtn = trackDiv.querySelector('.delete-from-pl');
+            delBtn.addEventListener('click', async () => {
+                await removeTrackFromPlaylist(currentPlaylistId, track.id);
+            });
+            playlistTrackListDiv.appendChild(trackDiv);
+        });
+    }
+
+    async function removeTrackFromPlaylist(playlistId, trackId) {
+        const pl = playlists.find(p => p.id === playlistId);
+        if (pl && pl.id !== 'default') {
+            pl.trackIds = pl.trackIds.filter(id => id !== trackId);
+            await savePlaylists();
+            await renderCurrentPlaylistContent();
+            renderPlaylistTabs();
+            updateSelectOptions();
+        } else if (pl && pl.id === 'default') {
+            // удаление из библиотеки? не удаляем трек, просто из "все треки" но это не удаляет файл. Но логичнее предложить удалить песню.
+            alert('Чтобы удалить трек из библиотеки, используйте кнопку 🗑 в левой панели.');
+        }
+    }
+
+    function renderPlaylistTabs() {
+        playlistTabsDiv.innerHTML = '';
+        playlists.forEach(pl => {
+            const tab = document.createElement('div');
+            tab.className = `playlist-tab ${currentPlaylistId === pl.id ? 'active' : ''}`;
+            tab.innerText = pl.name;
+            tab.addEventListener('click', () => {
+                currentPlaylistId = pl.id;
+                renderPlaylistTabs();
+                renderCurrentPlaylistContent();
+            });
+            playlistTabsDiv.appendChild(tab);
+        });
+        // кнопка удаления плейлиста? добавим дополнительную.
+        const delPlaylistBtn = document.createElement('div');
+        delPlaylistBtn.className = 'playlist-tab';
+        delPlaylistBtn.innerText = '🗑 Удалить текущий';
+        delPlaylistBtn.style.background = '#3a2a2f';
+        delPlaylistBtn.addEventListener('click', async () => {
+            if (currentPlaylistId === 'default') { alert('Нельзя удалить главную библиотеку'); return; }
+            const idx = playlists.findIndex(p => p.id === currentPlaylistId);
+            if (idx !== -1) {
+                playlists.splice(idx, 1);
+                await savePlaylists();
+                currentPlaylistId = 'default';
+                await renderPlaylistTabs();
+                await renderCurrentPlaylistContent();
+                updateSelectOptions();
+            }
+        });
+        playlistTabsDiv.appendChild(delPlaylistBtn);
+    }
+
+    function updateSelectOptions() {
+        playlistSelectAdd.innerHTML = '<option value="">-- выберите плейлист --</option>';
+        playlists.forEach(pl => {
+            if (pl.id !== 'default') {
+                const opt = document.createElement('option');
+                opt.value = pl.id;
+                opt.textContent = pl.name;
+                playlistSelectAdd.appendChild(opt);
+            }
+        });
+    }
+
+    async function addCurrentTrackToSelectedPlaylist() {
+        const selectedPlId = playlistSelectAdd.value;
+        if (!selectedPlId) { alert('Выберите плейлист'); return; }
+        if (!currentTrackId) { alert('Нет активного трека для добавления'); return; }
+        const playlist = playlists.find(p => p.id === selectedPlId);
+        if (playlist && !playlist.trackIds.includes(currentTrackId)) {
+            playlist.trackIds.push(currentTrackId);
+            await savePlaylists();
+            if (currentPlaylistId === selectedPlId) await renderCurrentPlaylistContent();
+            renderPlaylistTabs();
+            updateSelectOptions();
+        } else if (playlist && playlist.trackIds.includes(currentTrackId)) {
+            alert('Трек уже есть в этом плейлисте');
+        }
+    }
+
+    async function createNewPlaylist() {
+        let name = newPlaylistNameInput.value.trim();
+        if (!name) name = 'Новый плейлист';
+        const newId = 'pl_' + Date.now() + '_' + Math.random();
+        const newPl = { id: newId, name: name, trackIds: [] };
+        playlists.push(newPl);
+        await savePlaylists();
+        renderPlaylistTabs();
+        updateSelectOptions();
+        newPlaylistNameInput.value = '';
+        currentPlaylistId = newId;
+        renderPlaylistTabs();
+        renderCurrentPlaylistContent();
+    }
+
+    async function init() {
+        await openDB();
+        await loadAllTracks();
+        await loadPlaylists();
+        await renderGlobalTrackList();
+        renderPlaylistTabs();
+        await renderCurrentPlaylistContent();
+        updateSelectOptions();
+        fileInput.addEventListener('change', (e) => handleFiles(Array.from(e.target.files)));
+        createPlaylistBtn.addEventListener('click', createNewPlaylist);
+        addToPlaylistBtn.addEventListener('click', addCurrentTrackToSelectedPlaylist);
+        // навигация prev next
+        prevBtn.addEventListener('click', () => {
+            if (allTracks.length === 0) return;
+            let newIdx = currentIndexInGlobal - 1;
+            if (newIdx < 0) newIdx = allTracks.length - 1;
+            playTrackById(allTracks[newIdx].id);
+        });
+        nextBtn.addEventListener('click', () => {
+            if (allTracks.length === 0) return;
+            let newIdx = currentIndexInGlobal + 1;
+            if (newIdx >= allTracks.length) newIdx = 0;
+            playTrackById(allTracks[newIdx].id);
+        });
+        audioPlayer.addEventListener('ended', () => {
+            if (allTracks.length) nextBtn.click();
+        });
+    }
+
+    function escapeHtml(str) { return String(str).replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;});}
+    function updateTrackCounter() { trackCounterSpan.innerText = `${allTracks.length} трек(ов) в библиотеке`; }
+
+    init();
+</script>
 </body>
 </html>
